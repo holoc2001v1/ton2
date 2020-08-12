@@ -385,7 +385,7 @@ add_subdirectory(catchain)
 add_subdirectory(validator-session)
 add_subdirectory(validator)
 add_subdirectory(blockchain-explorer)
-add_subdirectory(storage)
+# add_subdirectory(storage)
 add_subdirectory(validator-engine)
 add_subdirectory(validator-engine-console)
 add_subdirectory(create-hardfork)
@@ -449,8 +449,8 @@ if (NOT TON_ONLY_TONLIB)
 add_executable(test-db test/test-td-main.cpp ${TONDB_TEST_SOURCE})
 target_link_libraries(test-db PRIVATE ton_db memprof tdfec)
 
-add_executable(test-storage test/test-td-main.cpp ${STORAGE_TEST_SOURCE})
-target_link_libraries(test-storage PRIVATE storage ton_db memprof tl_api tl-utils fec rldp2)
+# add_executable(test-storage test/test-td-main.cpp ${STORAGE_TEST_SOURCE})
+# target_link_libraries(test-storage PRIVATE storage ton_db memprof tl_api tl-utils fec rldp2)
 
 add_executable(test-rocksdb test/test-rocksdb.cpp)
 target_link_libraries(test-rocksdb PRIVATE memprof tddb tdutils)
@@ -553,3 +553,26 @@ add_test(test-db test-db ${TEST_OPTIONS})
 endif()
 #END internal
 
+if (GIT_SCM AND GITDIR)
+  set (build_date_cmd "date")
+  set (build_date_args "+%Y-%m-%d %T %z")
+  set (new_line "\n")
+  execute_process(COMMAND ${build_date_cmd} ${build_date_args}
+          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+          OUTPUT_VARIABLE build_date)
+
+  string(REPLACE "\n" "${eol_char}" build_date "${build_date}")
+  add_custom_command(OUTPUT ${PROJECT_SOURCE_DIR}/gitrevision.hh
+          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+          COMMAND ${CMAKE_COMMAND} -E echo_append "#define BUILD_REVISION \"" > ${PROJECT_SOURCE_DIR}/gitrevision.hh
+          COMMAND ${GIT_SCM} log -1 "--pretty=format:%H %ai" >> ${PROJECT_SOURCE_DIR}/gitrevision.hh
+          COMMAND ${CMAKE_COMMAND} -E echo "\"" >> ${PROJECT_SOURCE_DIR}/gitrevision.hh
+          COMMAND ${CMAKE_COMMAND} -E echo_append "#define BUILD_DATE \"${build_date}\"" >> ${PROJECT_SOURCE_DIR}/gitrevision.hh
+          DEPENDS ${GITDIR}/logs/HEAD
+          VERBATIM
+          )
+  add_custom_target(gitrev DEPENDS ${PROJECT_SOURCE_DIR}/gitrevision.hh)
+  message(STATUS "Generated ${PROJECT_SOURCE_DIR}/gitrevision.hh")
+else()
+  message(STATUS "Will not remake ${PROJECT_SOURCE_DIR}/gitrevision.hh")
+endif()
